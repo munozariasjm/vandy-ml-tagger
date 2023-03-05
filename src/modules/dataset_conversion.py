@@ -13,6 +13,7 @@ import uproot as u
 import awkward as ak
 import pandas as pd
 import pickle
+from joblib import Parallel, delayed
 
 """
 Modification of:
@@ -184,85 +185,96 @@ class PartData:
         # TODO
         return X, y
 
-    def convert(self, sources, destdir, basename):
+    def convert_single_file(self, sourcefile, destdir, basename, idx):
+        # Open a root file in "read" mode
+        with u.open(sourcefile) as f:
+            file_data = f["deepntuplizer;1"]["tree;1"]
+
+            keys = list(file_data.keys())
+
+            # Truth branches
+            reduced_truth = {
+                k: file_data[k].array(library="np")
+                for k in self.truth_branches
+            }
+
+            # Vertex branches
+            global_branches = {
+                k: file_data[k].array(library="np")
+                for k in self.global_branches
+            }
+
+            # cpf_branches
+            cpf_branches = {
+                k: file_data[k].array(library="np")
+                for k in self.cpf_branches
+            }
+
+            # npf_branches
+            npf_branches = {
+                k: file_data[k].array(library="np")
+                for k in self.npf_branches
+            }
+
+            # vtx_branches
+            vtx_branches = {
+                k: file_data[k].array(library="np")
+                for k in self.vtx_branches
+            }
+
+            # cpf_pts_branches
+            cpf_pts_branches = {
+                k: file_data[k].array(library="np")
+                for k in self.cpf_pts_branches
+            }
+
+            # npf_pts_branches
+            npf_pts_branches = {
+                k: file_data[k].array(library="np")
+                for k in self.npf_pts_branches
+            }
+
+            # vtx_pts_branches
+            vtx_pts_branches = {
+                k: file_data[k].array(library="np")
+                for k in self.vtx_pts_branches
+            }
+
+            X = {
+                "global_branches": global_branches,
+                "cpf_branches": cpf_branches,
+                "npf_branches": npf_branches,
+                "vtx_branches": vtx_branches,
+                "cpf_pts_branches": cpf_pts_branches,
+                "npf_pts_branches": npf_pts_branches,
+                "vtx_pts_branches": vtx_pts_branches,
+            }
+            y = reduced_truth
+
+        output = os.path.join(destdir, "%s_%d.pickle" % (basename, idx))
+        if os.path.exists(output):
+            os.remove(output)
+        v = self._transform(X, y)
+        with open(output, "wb") as f:
+            pickle.dump(v, f)
+
+    def convert(self, sourcelist, destdir, basename):
+        """
+        Parralelized conversion of a list of files into pickle files.
+        source: path to a single file or a directory of files
+        dest: path to the output directory
+
+        """
+        files = self.natural_sort(files)
         if not os.path.exists(destdir):
             os.makedirs(destdir)
+        Parallel(n_jobs=20)(
+            delayed(self.convert_single_file)(sourcefile, destdir, basename, idx)
+            for idx, sourcefile in enumerate(files)
+        )
 
-        # TODO: Add a progress bar and make multithreaded
-        for idx, sourcefile in enumerate(sources):
-            # Open a root file in "read" mode
-            with u.open(sourcefile) as f:
-                file_data = f["deepntuplizer;1"]["tree;1"]
 
-                keys = list(file_data.keys())
-
-                # Truth branches
-                reduced_truth = {
-                    k: file_data[k].array(library="np")
-                    for k in self.truth_branches
-                }
-
-                # Vertex branches
-                global_branches = {
-                    k: file_data[k].array(library="np")
-                    for k in self.global_branches
-                }
-
-                # cpf_branches
-                cpf_branches = {
-                    k: file_data[k].array(library="np")
-                    for k in self.cpf_branches
-                }
-
-                # npf_branches
-                npf_branches = {
-                    k: file_data[k].array(library="np")
-                    for k in self.npf_branches
-                }
-
-                # vtx_branches
-                vtx_branches = {
-                    k: file_data[k].array(library="np")
-                    for k in self.vtx_branches
-                }
-
-                # cpf_pts_branches
-                cpf_pts_branches = {
-                    k: file_data[k].array(library="np")
-                    for k in self.cpf_pts_branches
-                }
-
-                # npf_pts_branches
-                npf_pts_branches = {
-                    k: file_data[k].array(library="np")
-                    for k in self.npf_pts_branches
-                }
-
-                # vtx_pts_branches
-                vtx_pts_branches = {
-                    k: file_data[k].array(library="np")
-                    for k in self.vtx_pts_branches
-                }
-
-                X = {
-                    "global_branches": global_branches,
-                    "cpf_branches": cpf_branches,
-                    "npf_branches": npf_branches,
-                    "vtx_branches": vtx_branches,
-                    "cpf_pts_branches": cpf_pts_branches,
-                    "npf_pts_branches": npf_pts_branches,
-                    "vtx_pts_branches": vtx_pts_branches,
-                }
-                y = reduced_truth
-
-            output = os.path.join(destdir, "%s_%d.pickle" % (basename, idx))
-            if os.path.exists(output):
-                os.remove(output)
-            v = self._transform(X, y)
-            with open(output, "wb") as f:
-                pickle.dump(v, f)
-
-    def natural_sort(l):
+    def natural_sort(l: list):
         import re
         def convert(text):
             return int(text) if text.isdigit() else text.lower()
