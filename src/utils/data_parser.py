@@ -6,7 +6,7 @@ import awkward as ak
 import pandas as pd
 
 
-def uproot_root2array(tree, stop=None, branches=None):
+def uproot_root2array(tree, fname, stop=None, branches=None):
     dtypes = np.dtype([(b, np.dtype("O")) for b in branches])
     #    if isinstance(fname, list):
     #       fname = fname[0]
@@ -82,7 +82,7 @@ def uproot_MeanNormZeroPad(
     print("Total event-length per jet: {}".format(totallengthperjet))
 
     # shape could be more generic here... but must be passed to c module then
-    array = numpy.zeros((nevents, totallengthperjet), dtype="float32")
+    array = np.zeros((nevents, totallengthperjet), dtype="float32")
 
     # filling mean and normlist
     normslist = []

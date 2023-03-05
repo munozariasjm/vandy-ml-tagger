@@ -2,8 +2,7 @@ import argparse
 import glob
 import os
 import re
-from src.modules.dataset_conversion import PartData
-
+from src.utils.dataset_conversion import PartData
 
 def parse_args():
     parser = argparse.ArgumentParser("Convert qg benchmark datasets")
