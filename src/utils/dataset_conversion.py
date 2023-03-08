@@ -94,7 +94,6 @@ class PartData:
             "Cpfcan_BtagPf_trackJetDistVal",
             "Cpfcan_ptrel",
             "Cpfcan_drminsv",
-            "Cpfcan_distminsv",
             "Cpfcan_VTX_ass",
             "Cpfcan_puppiw",
             "Cpfcan_chi2",
@@ -142,6 +141,25 @@ class PartData:
 
         self.reduced_truth = ["isB", "isBB", "isLeptonicB", "isC", "isUDS", "isG"]
 
+    @staticmethod
+    def _pad_data(X: np.array, max_len: int) -> np.array:
+        """Pad the data to the maximum length of the batch.
+        X: 1D numpy array containing the data
+
+        """
+        try:
+            if X.shape[0] < max_len:
+                X = np.pad(
+                    X,
+                    ((0, max_len - X.shape[0]), (0, 0)),
+                    mode="constant",
+                    constant_values=0,
+                )
+            elif X.shape[0] > max_len:
+                X = X[:max_len]
+        except:
+            print(X)
+
     def _transform(self, X, y, start=0, stop=-1) -> Tuple[awkward0.JaggedArray, np.ndarray]:
         """Transform the data into a format suitable for training.
         X: dict of numpy arrays containing the input features
@@ -151,35 +169,22 @@ class PartData:
         # TODO
         # Transform cpf branches
         for k in X["cpf_branches"].keys():
-            X["cpf_branches"][k] = np.pad(
-                X["cpf_branches"][k], ((0, 0), (0, self.n_cpf - X["cpf_branches"][k].shape[1])), "constant"
-            )
+            X["cpf_branches"][k] = self._pad_data(X["cpf_branches"][k], self.n_cpf)
         # Transform npf branches
         for k in X["npf_branches"].keys():
-            X["npf_branches"][k] = np.pad(
-                X["npf_branches"][k], ((0, 0), (0, self.n_npf - X["npf_branches"][k].shape[1])), "constant"
-            )
+            X["npf_branches"][k] = self._pad_data(X["npf_branches"][k], self.n_npf)
         # Transform vtx branches
         for k in X["vtx_branches"].keys():
-            X["vtx_branches"][k] = np.pad(
-                X["vtx_branches"][k], ((0, 0), (0, self.n_vtx - X["vtx_branches"][k].shape[1])), "constant"
-            )
-
+            X["vtx_branches"][k] = self._pad_data(X["vtx_branches"][k], self.n_vtx)
         # Transform cpf pts branches
         for k in X["cpf_pts_branches"].keys():
-            X["cpf_pts_branches"][k] = np.pad(
-                X["cpf_pts_branches"][k], ((0, 0), (0, self.n_cpf - X["cpf_pts_branches"][k].shape[1])), "constant"
-            )
+            X["cpf_pts_branches"][k] = self._pad_data(X["cpf_pts_branches"][k], self.n_cpf)
         # Transform npf pts branches
         for k in X["npf_pts_branches"].keys():
-            X["npf_pts_branches"][k] = np.pad(
-                X["npf_pts_branches"][k], ((0, 0), (0, self.n_npf - X["npf_pts_branches"][k].shape[1])), "constant"
-            )
+            X["npf_pts_branches"][k] = self._pad_data(X["npf_pts_branches"][k], self.n_npf)
         # Transform vtx pts branches
         for k in X["vtx_pts_branches"].keys():
-            X["vtx_pts_branches"][k] = np.pad(
-                X["vtx_pts_branches"][k], ((0, 0), (0, self.n_vtx - X["vtx_pts_branches"][k].shape[1])), "constant"
-            )
+            X["vtx_pts_branches"][k] = self._pad_data(X["vtx_pts_branches"][k], self.n_vtx)
 
         # Transform truth branches
         # TODO
@@ -187,6 +192,7 @@ class PartData:
 
     def convert_single_file(self, sourcefile, destdir, basename, idx):
         # Open a root file in "read" mode
+        print("Converting ", sourcefile.split("/")[-1])
         with u.open(sourcefile) as f:
             file_data = f["deepntuplizer;1"]["tree;1"]
 
@@ -265,7 +271,7 @@ class PartData:
         dest: path to the output directory
 
         """
-        files = self.natural_sort(files)
+        files = self.natural_sort(sourcelist)
         if not os.path.exists(destdir):
             os.makedirs(destdir)
         Parallel(n_jobs=20)(
@@ -273,7 +279,7 @@ class PartData:
             for idx, sourcefile in enumerate(files)
         )
 
-
+    @staticmethod
     def natural_sort(l: list):
         import re
         def convert(text):
