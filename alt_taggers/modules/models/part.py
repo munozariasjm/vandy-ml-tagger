@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from functools import partial
 import numpy as np
-from src.utils.dataset_conversion import DatasetConversion
+from alt_taggers.utils.dataset_conversion import PartData
 
 def node_distance(x):
     inner = -2 * torch.matmul(x.transpose(2, 1), x)

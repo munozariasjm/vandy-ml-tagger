@@ -257,7 +257,7 @@ class PartData:
             }
             y = reduced_truth
 
-        output = os.path.join(destdir, "%s_%d.pickle" % (basename, idx))
+        output = os.path.join(destdir, "%s_%d.pkl" % (basename, idx))
         if os.path.exists(output):
             os.remove(output)
         v = self._transform(X, y)

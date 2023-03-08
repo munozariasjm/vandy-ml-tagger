@@ -25,7 +25,7 @@ import numpy as np
 from torch.utils.data import Dataset
 import pickle
 
-class CustomLoader(Dataset):
+class CustomDS(Dataset):
     """
     Custom dataset loader for the data.
     """
@@ -33,6 +33,7 @@ class CustomLoader(Dataset):
         super().__init__()
 
         self.file_list = glob.glob(os.path.join(input_folder, "*.pkl"))
+        assert len(self.file_list) > 0, "No .pkl files found".format(input_folder)
         self.file_list.sort()
 
         self.all_files_len = self._all_files_len()
@@ -42,14 +43,14 @@ class CustomLoader(Dataset):
         """
         Returns the total number of events in the dataset.
         """
-        self.data_list = []
+        self.data_list = [] # Len of all files
         for file in self.file_list:
             with open(file, "rb") as f:
                 data = pickle.load(f)
                 ldata = len(data[0]["global_branches"]["jet_pt"])
                 self.data_list.append(ldata)
+        self.total_len = np.sum(self.data_list)
 
-        self.total_len = np.sum(ldata)
 
     def map_to_location(self, idx):
         """
