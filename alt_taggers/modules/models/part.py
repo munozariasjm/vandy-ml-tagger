@@ -726,3 +726,8 @@ class ParticleTransformer(nn.Module):
             output = torch.softmax(output, dim=1)
 
         return output
+
+
+# class PartTrainer:
+
+#     def __init__(self, ) -> None:

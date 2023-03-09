@@ -183,26 +183,17 @@ class PartData:
         # X_branch is a list of of arrays [BATCH, N_FEATS, N_DEPCTIONS]
         branches = []
         for sub_branch in X_branch:
-            try:
-                if n_pad:
-                    try:
-                        branches.append(
-                            np.stack([self._pad_data(x, n_pad) for x in sub_branch if isinstance(x, np.ndarray)])
-                        )
-                    except:
-                        print(sub_branch)
-                else:
-                    try:
-                        branches.append(
-                            np.stack(
-                                x for x in sub_branch if isinstance(x, np.ndarray)
-                            )
-                        )
-                    except:
-                        print(sub_branch)
-                return np.concatenate(branches).astype(dtype='float32', order='C')
-            except Exception as e:
-                print(e)
+            if n_pad:
+                branches.append(
+                    np.stack([self._pad_data(x, n_pad) for x in sub_branch if isinstance(x, np.ndarray)])
+                )
+            else:
+                branches.append(
+                    np.stack(
+                        x for x in sub_branch if isinstance(x, np.ndarray)
+                    )
+                )
+        return np.stack(branches).astype(dtype='float32', order='C')
 
     def _transform(self, X, y, start=0, stop=-1) -> Tuple[awkward0.JaggedArray, np.ndarray]:
         """Transform the data into a format suitable for training.
@@ -225,7 +216,6 @@ class PartData:
         vtx_pts_np = self.data_concat(X["vtx_pts_branches"], self.n_vtx)
 
         # Transform truth branches
-        # ground_truth = self.data_concat(y)
         ground_truth = self.parse_labels(y)
 
         X = (
