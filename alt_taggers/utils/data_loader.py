@@ -31,8 +31,11 @@ class CustomDS(Dataset):
     """
     def __init__(self, input_folder, device="cuda") -> None:
         super().__init__()
-
-        self.file_list = glob.glob(os.path.join(input_folder, "*.pkl"))
+        if not input_folder.endswith(".pkl"):
+            path = (input_folder + "*.pkl").replace("**", "*")
+            self.file_list = glob.glob(path)
+        else:
+            self.file_list = glob.glob(os.path.join(input_folder) + "/*.pkl")
         assert len(self.file_list) > 0, "No .pkl files found".format(input_folder)
         self.file_list.sort()
         self.device = device

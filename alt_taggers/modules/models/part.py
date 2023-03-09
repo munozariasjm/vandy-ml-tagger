@@ -780,11 +780,14 @@ class PartTrainer:
             train_loss = 0.0
             val_loss = 0.0
 
-            for batch_x, batch_y in tqdm(train_loader):
+            for batch_x, batch_y in train_loader:
                 train_loss += self.train_step(batch_x, batch_y)
+                pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
 
-            for batch_x, batch_y in tqdm(val_loader):
+            for batch_x, batch_y in val_loader:
                 val_loss += self.eval_step(batch_x, batch_y)
+
+            pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
 
             train_loss /= len(train_loader)
             val_loss /= len(val_loader)
@@ -793,8 +796,6 @@ class PartTrainer:
                 best_val_loss = val_loss
                 model_path = os.path.join(path, f"best_model.pt")
                 torch.save(self.model, model_path)
-
-            pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
 
             if path is not None:
                 model_path = os.path.join(path, f"model_{epoch}.pt")
