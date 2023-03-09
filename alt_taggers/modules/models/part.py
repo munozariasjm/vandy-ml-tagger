@@ -7,6 +7,9 @@ import torch.nn as nn
 from functools import partial
 import numpy as np
 from alt_taggers.utils.dataset_conversion import PartData
+from alt_taggers.utils.pt_ranger import Ranger
+from tqdm.auto import tqdm
+import os
 
 def node_distance(x):
     inner = -2 * torch.matmul(x.transpose(2, 1), x)
@@ -728,6 +731,71 @@ class ParticleTransformer(nn.Module):
         return output
 
 
-# class PartTrainer:
+class PartTrainer:
 
-#     def __init__(self, ) -> None:
+    def __init__(self,
+                optimizer = None,
+                scheduler = None,
+                model = None,
+                device = None,
+                **kwargs):
+        self.optimizer = optimizer
+        self.scheduler = scheduler
+        self.model = model
+        self.device = device
+
+    @staticmethod
+    def cross_entropy_one_hot(input, target):
+        _, labels = target.max(dim=1)
+        return nn.CrossEntropyLoss()(input, labels)
+
+    def train_step(self, batch, labels):
+        self.model.train()
+        self.optimizer.zero_grad()
+
+        output = self.model(batch)
+
+        loss = self.cross_entropy_one_hot(output, labels)
+        loss.backward()
+        self.optimizer.step()
+
+        return loss.item()
+
+    def eval_step(self, batch, labels):
+        self.model.eval()
+
+        output = self.model(batch)
+
+        loss = self.cross_entropy_one_hot(output, labels)
+
+        return loss.item()
+
+    def train(self, epochs, train_loader, val_loader, path = None):
+        self.model.to(self.device)
+        pbar = tqdm(range(epochs))
+        best_val_loss = 1e6
+
+        for epoch in pbar:
+            print("Epoch: ", epoch)
+            train_loss = 0.0
+            val_loss = 0.0
+
+            for batch_x, batch_y in tqdm(train_loader):
+                train_loss += self.train_step(batch_x, batch_y)
+
+            for batch_x, batch_y in tqdm(val_loader):
+                val_loss += self.eval_step(batch_x, batch_y)
+
+            train_loss /= len(train_loader)
+            val_loss /= len(val_loader)
+
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                model_path = os.path.join(path, f"best_model.pt")
+                torch.save(self.model, model_path)
+
+            pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
+
+            if path is not None:
+                model_path = os.path.join(path, f"model_{epoch}.pt")
+                torch.save(self.model, model_path)

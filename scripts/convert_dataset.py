@@ -5,7 +5,7 @@ import re
 from src.utils.dataset_conversion import PartData
 
 def parse_args():
-    parser = argparse.ArgumentParser("Convert qg benchmark datasets")
+    parser = argparse.ArgumentParser("Convert root to pickle datasets")
     parser.add_argument(
         "-c",
         "--data_class",

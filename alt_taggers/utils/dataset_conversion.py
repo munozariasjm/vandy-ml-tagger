@@ -173,6 +173,29 @@ class PartData:
                 X = X[:max_len, :]
         return X
 
+    @staticmethod
+    def reduce_truth(uproot_arrays):
+
+        b = uproot_arrays['isB']
+
+        bb = uproot_arrays['isBB']
+        gbb = uproot_arrays['isGBB']
+
+        bl = uproot_arrays['isLeptonicB']
+        blc = uproot_arrays['isLeptonicB_C']
+        lepb = bl+blc
+
+        c = uproot_arrays['isC']
+        cc = uproot_arrays['isCC']
+        gcc = uproot_arrays['isGCC']
+
+        ud = uproot_arrays['isUD']
+        s = uproot_arrays['isS']
+        uds = ud+s
+
+        g = uproot_arrays['isG']
+        return np.vstack((b,bb+gbb,lepb,c+cc+gcc,uds,g)).transpose()
+
     def parse_labels(self, y: np.array) -> np.array:
         """Parse the labels into a format suitable for training.
         y: dict coltaining classes as one hot encoded vectors
@@ -216,7 +239,7 @@ class PartData:
         vtx_pts_np = self.data_concat(X["vtx_pts_branches"], self.n_vtx)
 
         # Transform truth branches
-        ground_truth = self.parse_labels(y)
+        ground_truth = self.reduce_truth(y)
 
         X = (
             cpf_np,
@@ -238,10 +261,10 @@ class PartData:
             keys = list(file_data.keys())
 
             # Truth branches
-            reduced_truth = [
-                file_data[k].array(library="np")
+            reduced_truth = {
+                k: file_data[k].array(library="np")
                 for k in self.truth_branches
-            ]
+            }
 
             # Vertex branches
             global_branches = [
