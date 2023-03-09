@@ -47,7 +47,8 @@ class CustomDS(Dataset):
         for file in self.file_list:
             with open(file, "rb") as f:
                 data = pickle.load(f)
-                ldata = len(data[0]["global_branches"]["jet_pt"])
+                print(data[1])
+                ldata = len(data[1]["isB"])
                 self.data_list.append(ldata)
         self.total_len = np.sum(self.data_list)
 

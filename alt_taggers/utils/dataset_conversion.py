@@ -147,7 +147,21 @@ class PartData:
         X: 1D numpy array containing the data
 
         """
-        try:
+        if isinstance(X, list):
+            X = np.array(X)
+        if isinstance(X, str):
+            print("X is a string", X)
+        if len(X.shape) == 1:
+            if X.shape[0] < max_len:
+                    X = np.pad(
+                        X,
+                        (0, max_len - X.shape[0]),
+                        mode="constant",
+                        constant_values=0,
+                    )
+            elif X.shape[0] > max_len:
+                X = X[:max_len]
+        elif len(X.shape) == 2:
             if X.shape[0] < max_len:
                 X = np.pad(
                     X,
@@ -155,10 +169,40 @@ class PartData:
                     mode="constant",
                     constant_values=0,
                 )
-            elif X.shape[0] > max_len:
-                X = X[:max_len]
-        except:
-            print(X)
+            else:
+                X = X[:max_len, :]
+        return X
+
+    def parse_labels(self, y: np.array) -> np.array:
+        """Parse the labels into a format suitable for training.
+        y: dict coltaining classes as one hot encoded vectors
+        """
+        return np.stack(y).T
+
+    def data_concat(self, X_branch: List[np.array], n_pad: int=None) -> np.ndarray:
+        # X_branch is a list of of arrays [BATCH, N_FEATS, N_DEPCTIONS]
+        branches = []
+        for sub_branch in X_branch:
+            try:
+                if n_pad:
+                    try:
+                        branches.append(
+                            np.stack([self._pad_data(x, n_pad) for x in sub_branch if isinstance(x, np.ndarray)])
+                        )
+                    except:
+                        print(sub_branch)
+                else:
+                    try:
+                        branches.append(
+                            np.stack(
+                                x for x in sub_branch if isinstance(x, np.ndarray)
+                            )
+                        )
+                    except:
+                        print(sub_branch)
+                return np.concatenate(branches).astype(dtype='float32', order='C')
+            except Exception as e:
+                print(e)
 
     def _transform(self, X, y, start=0, stop=-1) -> Tuple[awkward0.JaggedArray, np.ndarray]:
         """Transform the data into a format suitable for training.
@@ -168,27 +212,32 @@ class PartData:
         # Transform global branches
         # TODO
         # Transform cpf branches
-        for k in X["cpf_branches"].keys():
-            X["cpf_branches"][k] = self._pad_data(X["cpf_branches"][k], self.n_cpf)
+        cpf_np  = self.data_concat(X["cpf_branches"], self.n_cpf)
         # Transform npf branches
-        for k in X["npf_branches"].keys():
-            X["npf_branches"][k] = self._pad_data(X["npf_branches"][k], self.n_npf)
+        npf_np  = self.data_concat(X["npf_branches"], self.n_npf)
         # Transform vtx branches
-        for k in X["vtx_branches"].keys():
-            X["vtx_branches"][k] = self._pad_data(X["vtx_branches"][k], self.n_vtx)
+        vtx_np = self.data_concat(X["vtx_branches"], self.n_vtx)
         # Transform cpf pts branches
-        for k in X["cpf_pts_branches"].keys():
-            X["cpf_pts_branches"][k] = self._pad_data(X["cpf_pts_branches"][k], self.n_cpf)
+        cpf_pts_np = self.data_concat(X["cpf_pts_branches"], self.n_cpf)
         # Transform npf pts branches
-        for k in X["npf_pts_branches"].keys():
-            X["npf_pts_branches"][k] = self._pad_data(X["npf_pts_branches"][k], self.n_npf)
+        npf_pts_np = self.data_concat(X["npf_pts_branches"], self.n_npf)
         # Transform vtx pts branches
-        for k in X["vtx_pts_branches"].keys():
-            X["vtx_pts_branches"][k] = self._pad_data(X["vtx_pts_branches"][k], self.n_vtx)
+        vtx_pts_np = self.data_concat(X["vtx_pts_branches"], self.n_vtx)
 
         # Transform truth branches
-        # TODO
-        return X, y
+        # ground_truth = self.data_concat(y)
+        ground_truth = self.parse_labels(y)
+
+        X = (
+            cpf_np,
+            npf_np,
+            vtx_np,
+            cpf_pts_np,
+            npf_pts_np,
+            vtx_pts_np,
+        )
+
+        return X, ground_truth
 
     def convert_single_file(self, sourcefile, destdir, basename, idx):
         # Open a root file in "read" mode
@@ -199,52 +248,52 @@ class PartData:
             keys = list(file_data.keys())
 
             # Truth branches
-            reduced_truth = {
-                k: file_data[k].array(library="np")
+            reduced_truth = [
+                file_data[k].array(library="np")
                 for k in self.truth_branches
-            }
+            ]
 
             # Vertex branches
-            global_branches = {
-                k: file_data[k].array(library="np")
+            global_branches = [
+                file_data[k].array(library="np")
                 for k in self.global_branches
-            }
+            ]
 
             # cpf_branches
-            cpf_branches = {
-                k: file_data[k].array(library="np")
+            cpf_branches = [
+                file_data[k].array(library="np")
                 for k in self.cpf_branches
-            }
+            ]
 
             # npf_branches
-            npf_branches = {
-                k: file_data[k].array(library="np")
+            npf_branches = [
+                file_data[k].array(library="np")
                 for k in self.npf_branches
-            }
+            ]
 
             # vtx_branches
-            vtx_branches = {
-                k: file_data[k].array(library="np")
+            vtx_branches = [
+                file_data[k].array(library="np")
                 for k in self.vtx_branches
-            }
+            ]
 
             # cpf_pts_branches
-            cpf_pts_branches = {
-                k: file_data[k].array(library="np")
+            cpf_pts_branches = [
+                file_data[k].array(library="np")
                 for k in self.cpf_pts_branches
-            }
+            ]
 
             # npf_pts_branches
-            npf_pts_branches = {
-                k: file_data[k].array(library="np")
+            npf_pts_branches = [
+                file_data[k].array(library="np")
                 for k in self.npf_pts_branches
-            }
+            ]
 
             # vtx_pts_branches
-            vtx_pts_branches = {
-                k: file_data[k].array(library="np")
+            vtx_pts_branches = [
+                file_data[k].array(library="np")
                 for k in self.vtx_pts_branches
-            }
+            ]
 
             X = {
                 "global_branches": global_branches,

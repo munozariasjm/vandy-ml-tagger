@@ -691,6 +691,13 @@ class ParticleTransformer(nn.Module):
 
     def forward(self, inpt):
         cpf, npf, vtx, cpf_4v, npf_4v, vtx_4v = inpt[0], inpt[1], inpt[2], inpt[3], inpt[4], inpt[5]
+        # cpf = inpt["cpf_branches"]
+        # npf = inpt["npf_branches"]
+        # vtx = inpt["vtx_branches"]
+        # cpf_4v = inpt["cpf_pts_branches"]
+        # npf_4v = inpt["npf_pts_branches"]
+        # vtx_4v = inpt["vtx_pts_branches"]
+
 
         padding_mask = torch.cat((cpf_4v[:,:,:1],npf_4v[:,:,:1],vtx_4v[:,:,:1]), dim = 1)
         padding_mask =torch.eq(padding_mask[:,:,0], 0.0)
