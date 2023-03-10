@@ -96,6 +96,7 @@ class DataLoader:
         self.num_workers = num_workers
         self.shuffle = shuffle
         self.drop_last = drop_last
+        self.class_weights = []
 
     def get_loader(self):
         """

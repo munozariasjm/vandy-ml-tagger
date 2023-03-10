@@ -239,7 +239,7 @@ class PartData:
         ground_truth = self.reduce_truth(y)
         ground_truth = np.where(np.isnan(ground_truth), 0, ground_truth)
         sum_prbs = np.sum(ground_truth, axis=1)
-        mask = sum_prbs == 0
+        mask = sum_prbs > 0
         ground_truth = ground_truth[mask]
 
         # Transform cpf branches
