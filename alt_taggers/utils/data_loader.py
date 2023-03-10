@@ -76,8 +76,7 @@ class CustomDS(Dataset):
         # Read the data from the file
         with open(self.file_list[file_idx], "rb") as f:
             data = pickle.load(f)
-        X = data
-        X = ([torch.from_numpy(x).permute(1, 2, 0)[idx].to(self.device) for x in data[0]])
+        X = ([torch.from_numpy(x)[idx].T.to(self.device) for x in data[0]])
         y = torch.from_numpy(data[1][idx]).to(self.device)
         return X, y
 
