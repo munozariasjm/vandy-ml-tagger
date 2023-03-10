@@ -775,22 +775,21 @@ class PartTrainer:
         pbar = tqdm(range(epochs))
         best_val_loss = 1e6
         scaler  = torch.cuda.amp.GradScaler()
+        print("Train files", len(train_loader))
+        print("Val files", len(val_loader))
         for epoch in pbar:
             print("Epoch: ", epoch)
             train_loss = 0.0
             val_loss = 0.0
 
             for batch_x, batch_y in train_loader:
-                train_loss += self.train_step(batch_x, batch_y, scaler = scaler)
+                train_loss += self.train_step(batch_x, batch_y, scaler = scaler) / len(train_loader)
                 pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
 
             for batch_x, batch_y in val_loader:
-                val_loss += self.eval_step(batch_x, batch_y)
+                val_loss += self.eval_step(batch_x, batch_y) / len(val_loader)
 
             pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
-
-            train_loss /= len(train_loader)
-            val_loss /= len(val_loader)
 
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
