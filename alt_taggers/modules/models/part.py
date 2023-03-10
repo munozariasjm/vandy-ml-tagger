@@ -749,39 +749,39 @@ class PartTrainer:
         _, labels = target.max(dim=1)
         return nn.CrossEntropyLoss()(input, labels)
 
-    def train_step(self, batch, labels):
+    def train_step(self, batch, labels, scaler = None):
         self.model.train()
         self.optimizer.zero_grad()
+        with torch.cuda.amp.autocast():
+            output = self.model(batch)
+            loss = self.cross_entropy_one_hot(output, labels.type_as(output))
 
-        output = self.model(batch)
-
-        loss = self.cross_entropy_one_hot(output, labels)
-        loss.backward()
-        self.optimizer.step()
-
+        #loss.backward()
+        scaler.scale(loss).backward()
+        scaler.unscale_(self.optimizer)
+        scaler.step(self.optimizer)
+        scaler.update()
+        self.optimizer.zero_grad()
         return loss.item()
 
     def eval_step(self, batch, labels):
         self.model.eval()
-
         output = self.model(batch)
-
-        loss = self.cross_entropy_one_hot(output, labels)
-
+        loss = self.cross_entropy_one_hot(output, labels.long().type_as(output))
         return loss.item()
 
     def train(self, epochs, train_loader, val_loader, path = None):
         self.model.to(self.device)
         pbar = tqdm(range(epochs))
         best_val_loss = 1e6
-
+        scaler  = torch.cuda.amp.GradScaler()
         for epoch in pbar:
             print("Epoch: ", epoch)
             train_loss = 0.0
             val_loss = 0.0
 
             for batch_x, batch_y in train_loader:
-                train_loss += self.train_step(batch_x, batch_y)
+                train_loss += self.train_step(batch_x, batch_y, scaler = scaler)
                 pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
 
             for batch_x, batch_y in val_loader:
