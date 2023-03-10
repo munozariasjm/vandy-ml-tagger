@@ -4,9 +4,9 @@ import torch
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-from alt_taggers.modules.models.part import ParticleTransformer, PartTrainer
-from alt_taggers.utils.data_loader import DataLoader
-from alt_taggers.utils.pt_ranger import Ranger
+from vandy_taggers.modules.models.part import ParticleTransformer, PartTrainer
+from vandy_taggers.utils.data_loader import DataLoader
+from vandy_taggers.utils.pt_ranger import Ranger
 
 
 def parse_args():

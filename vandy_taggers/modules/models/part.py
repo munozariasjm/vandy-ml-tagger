@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 from functools import partial
 import numpy as np
-from alt_taggers.utils.dataset_conversion import PartData
-from alt_taggers.utils.pt_ranger import Ranger
+from vandy_taggers.utils.dataset_conversion import PartData
+from vandy_taggers.utils.pt_ranger import Ranger
 from tqdm.auto import tqdm
 import os
 

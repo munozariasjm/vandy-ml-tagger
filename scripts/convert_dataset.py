@@ -2,7 +2,7 @@ import argparse
 import glob
 import os
 import re
-from src.utils.dataset_conversion import PartData
+from vandy_taggers.utils.dataset_conversion import PartData
 
 def parse_args():
     parser = argparse.ArgumentParser("Convert root to pickle datasets")
@@ -10,8 +10,9 @@ def parse_args():
         "-c",
         "--data_class",
         required=True,
-        help="Class of dataset."
-        default="Part")
+        help="Class of dataset.",
+        default="Part",
+        )
     parser.add_argument(
         "-i",
         "--inputdir",
@@ -47,6 +48,7 @@ if __name__ == "__main__":
         convert = PartData.convert
 
     sources = natural_sort(glob.glob(os.path.join(args.inputdir, "*.root")))
+    assert len(sources) > 0, "No files found in {}".format(args.inputdir)
     n_train = int(args.train_test_split * len(sources))
 
     train_sources = sources[:n_train]

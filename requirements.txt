@@ -1,0 +1,12 @@
+awkward==2.1.0
+awkward0==0.15.5
+joblib==1.2.0
+matplotlib==3.7.1
+numpy==1.24.2
+pandas==1.5.3
+setuptools==63.4.1
+torch==1.13.1
+tqdm==4.65.0
+uproot==5.0.4
+uproot3==3.14.4
+uproot3_methods==0.10.1

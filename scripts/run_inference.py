@@ -4,24 +4,24 @@ import torch
 import joblib
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-from alt_taggers.modules.models.part import ParticleTransformer, PartTrainer
-from alt_taggers.utils.data_loader import DataLoader
-from alt_taggers.utils.pt_ranger import Ranger
+from vandy_taggers.modules.models.part import ParticleTransformer, PartTrainer
+from vandy_taggers.utils.data_loader import DataLoader
+from vandy_taggers.utils.pt_ranger import Ranger
 
 def parse_args():
     import argparse
 
-    parser = argparse.ArgumentParser("Run inference with  Particle Transformer")
+    parser = argparse.ArgumentParser("Run inference with Particle Transformer")
     parser.add_argument(
         "-i",
         "--inputdir",
         required=True,
-        help="Directory of the converted .*pkl files to test... can use glob hints"
+        help="Directory of the .*pkl files to test... can use glob hints"
     )
     parser.add_argument(
         "-m",
         "--modelpath",
-        required=True
+        required=True,
         help="Path to the model to use for inference."
     )
     parser.add_argument(
@@ -59,8 +59,6 @@ if __name__ == "__main__":
     model.eval()
     with torch.no_grad():
         for (X, y) in test_loader:
-            X = X.to(device)
-            y = y.to(device)
             predictions = model(X)
             all_predictions.append(predictions)
             all_targets.append(y)
