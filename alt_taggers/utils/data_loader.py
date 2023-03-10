@@ -76,8 +76,12 @@ class CustomDS(Dataset):
         # Read the data from the file
         with open(self.file_list[file_idx], "rb") as f:
             data = pickle.load(f)
-        X = ([torch.from_numpy(x)[idx].T.to(self.device) for x in data[0]])
-        y = torch.from_numpy(data[1][idx]).to(self.device)
+        try:
+            X = ([torch.from_numpy(x)[idx].T.to(self.device) for x in data[0]])
+            y = torch.from_numpy(data[1][idx]).to(self.device)
+        except:
+            print("Error in file: ", self.file_list[file_idx])
+            print("Error at index: ", idx)
         return X, y
 
 

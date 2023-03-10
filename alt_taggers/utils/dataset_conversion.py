@@ -238,32 +238,37 @@ class PartData:
         # Transform truth branches
         ground_truth = self.reduce_truth(y)
         ground_truth = np.where(np.isnan(ground_truth), 0, ground_truth)
-
         sum_prbs = np.sum(ground_truth, axis=1)
-        mask = sum_prbs > 0
+        mask = sum_prbs == 0
+        ground_truth = ground_truth[mask]
+
         # Transform cpf branches
-        cpf_np  = self.data_concat(X["cpf_branches"], self.n_cpf)
-        cpf_np = np.where(np.isnan(cpf_np), 0, cpf_np).transpose(1, 0, 2)
+        cpf_np  = self.data_concat(X["cpf_branches"], self.n_cpf).transpose(1, 0, 2)
+        cpf_np = cpf_np[mask]
         # Transform npf branches
-        npf_np  = self.data_concat(X["npf_branches"], self.n_npf)
-        npf_np = np.where(np.isnan(npf_np), 0, npf_np).transpose(1, 0, 2)
-        npf_np = npf_np[sum_prbs > 0]
+        npf_np  = self.data_concat(X["npf_branches"], self.n_npf).transpose(1, 0, 2)
+        npf_np = npf_np[mask]
         # Transform vtx branches
-        vtx_np = self.data_concat(X["vtx_branches"], self.n_vtx)
-        vtx_np = np.where(np.isnan(vtx_np), 0, vtx_np).transpose(1, 0, 2)
-        vtx_np = vtx_np[sum_prbs > 0]
+        vtx_np = self.data_concat(X["vtx_branches"], self.n_vtx).transpose(1, 0, 2)
+        vtx_np = vtx_np[mask]
         # Transform cpf pts branches
-        cpf_pts_np = self.data_concat(X["cpf_pts_branches"], self.n_cpf)
-        cpf_pts_np = np.where(np.isnan(cpf_pts_np), 0, cpf_pts_np).transpose(1, 0, 2)
-        cpf_pts_np = cpf_pts_np[sum_prbs > 0]
+        cpf_pts_np = self.data_concat(X["cpf_pts_branches"], self.n_cpf).transpose(1, 0, 2)
+        cpf_pts_np = cpf_pts_np[mask]
         # Transform npf pts branches
-        npf_pts_np = self.data_concat(X["npf_pts_branches"], self.n_npf)
-        npf_pts_np = np.where(np.isnan(npf_pts_np), 0, npf_pts_np).transpose(1, 0, 2)
-        npf_pts_np = npf_pts_np[sum_prbs > 0]
+        npf_pts_np = self.data_concat(X["npf_pts_branches"], self.n_npf).transpose(1, 0, 2)
+        npf_pts_np = npf_pts_np[mask]
         # Transform vtx pts branches
-        vtx_pts_np = self.data_concat(X["vtx_pts_branches"], self.n_vtx)
-        vtx_pts_np = np.where(np.isnan(vtx_pts_np), 0, vtx_pts_np).transpose(1, 0, 2)
-        vtx_pts_np = vtx_pts_np[sum_prbs > 0]
+        vtx_pts_np = self.data_concat(X["vtx_pts_branches"], self.n_vtx).transpose(1, 0, 2)
+        vtx_pts_np = vtx_pts_np[mask]
+
+        cpf_np = np.where(np.isnan(cpf_np), 0, cpf_np)
+        npf_np = np.where(np.isnan(npf_np), 0, npf_np)
+        vtx_np = np.where( np.isnan(vtx_np), 0, vtx_np)
+        cpf_pts_np = np.where(np.isnan(cpf_pts_np), 0, cpf_pts_np)
+        npf_pts_np = np.where(np.isnan(npf_pts_np), 0, npf_pts_np)
+        vtx_pts_np = np.where(np.isnan(vtx_pts_np), 0, vtx_pts_np)
+
+
         X = (
             cpf_np,
             npf_np,
