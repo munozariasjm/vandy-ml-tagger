@@ -66,33 +66,48 @@ class CustomDS(Dataset):
         return file_idx, idx
 
     def __len__(self):
-        return self.total_len
+        return len(self.file_list)
 
-    def __getitem__(self, idx):
+    def transform_features(self, data):
+        """
+        Args:
+            X (List): List of all the features
+        """
+        X = data[0]
+        y = data[1]
+        all_data = [] # N_enevts x N_branches x N_features
+        n_branches = len(X)
+        n_enents = X[0].shape[0]
+        all_labels = []
+        for i in range(n_enents):
+            event_data = []
+            for j in range(n_branches):
+                X_i = torch.from_numpy(X[j][i]).to(self.device).T
+                event_data.append(X_i)
+            y_i = torch.from_numpy(y[i]).to(self.device)
+            all_data.append((event_data, y_i))
+        return all_data # N_events x N_branches x N_features
+
+    def __getitem__(self, file_idx):
         """
         Returns the data for the given index.
         """
-        file_idx, idx = self.map_to_location(idx)
+        # file_idx, idx = self.map_to_location(idx)
         # Read the data from the file
         with open(self.file_list[file_idx], "rb") as f:
             data = pickle.load(f)
-        try:
-            X = ([torch.from_numpy(x)[idx].T.to(self.device) for x in data[0]])
-            y = torch.from_numpy(data[1][idx]).to(self.device)
-        except:
-            print("Error in file: ", self.file_list[file_idx])
-            print("Error at index: ", idx)
-        return X, y
+        X = self.transform_features(data)
+        return X
 
 
 class DataLoader:
     """
     Data loader for the dataset.
     """
-    def __init__(self, input_folder, batch_size, num_workers=0, shuffle=True, drop_last=True) -> None:
+    def __init__(self, input_folder, num_workers=0, shuffle=True, drop_last=True) -> None:
         super().__init__()
         self.input_folder = input_folder
-        self.batch_size = batch_size
+        self.batch_size = 1
         self.num_workers = num_workers
         self.shuffle = shuffle
         self.drop_last = drop_last
@@ -103,4 +118,10 @@ class DataLoader:
         Returns the dataloader for the dataset.
         """
         dataset = CustomDS(self.input_folder)
-        return torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=self.shuffle, drop_last=self.drop_last)
+        # return torch.utils.data.DataLoader(dataset,
+        #                                    batch_size=self.batch_size,
+        #                                    num_workers=self.num_workers,
+        #                                    shuffle=self.shuffle,
+        #                                    drop_last=self.drop_last)
+        return dataset
+
