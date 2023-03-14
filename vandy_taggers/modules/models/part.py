@@ -770,27 +770,33 @@ class PartTrainer:
         loss = self.cross_entropy_one_hot(output, labels.long().type_as(output))
         return loss.item()
 
-    def train(self, epochs, train_loader, val_loader, path = None):
+    def file_to_loader(self, file_data, batch_size = 1, shuffle = False):
+        file_loader = torch.utils.data.DataLoader(file_data, batch_size = batch_size, shuffle = shuffle)
+        return file_loader
+
+    def train(self, epochs, file_train_loader, file_val_loader, BS, path = None):
         self.model.to(self.device)
         pbar = tqdm(range(epochs))
         best_val_loss = 1e6
         scaler  = torch.cuda.amp.GradScaler()
-        print("Train files", len(train_loader))
-        print("Val files", len(val_loader))
+        print("Train files", len(file_train_loader))
+        print("Val files", len(file_val_loader))
         for epoch in pbar:
             print("Epoch: ", epoch)
             train_loss = 0.0
             val_loss = 0.0
 
-            for batch_x, batch_y in train_loader:
-                print(batch_x)
-                train_loss += self.train_step(batch_x, batch_y, scaler = scaler) / len(train_loader)
-                pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
+            for file_data in file_train_loader:
+                loader = self.file_to_loader(file_data, batch_size = BS, shuffle = True)
+                for batch_x, batch_y in loader:
+                    train_loss += self.train_step(batch_x, batch_y, scaler = scaler) / len(loader)
+                    pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
 
-            for batch_x, batch_y in val_loader:
-                val_loss += self.eval_step(batch_x, batch_y) / len(val_loader)
-
-            pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
+            for file_data in file_val_loader:
+                loader = self.file_to_loader(file_data, batch_size = BS, shuffle = False)
+                for batch_x, batch_y in loader:
+                    val_loss += self.eval_step(batch_x, batch_y) / len(loader)
+                    pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
 
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
