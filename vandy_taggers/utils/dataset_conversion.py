@@ -230,7 +230,7 @@ class PartData:
             return True
         return False
 
-    def _transform(self, X, y, start=0, stop=-1) -> Tuple[awkward0.JaggedArray, np.ndarray]:
+    def _transform(self, X, y, pT, start=0, stop=-1) -> Tuple[awkward0.JaggedArray, np.ndarray]:
         """Transform the data into a format suitable for training.
         X: dict of numpy arrays containing the input features
         y: array containing the target labels
@@ -278,7 +278,7 @@ class PartData:
             vtx_pts_np,
         )
 
-        return X, ground_truth
+        return X, ground_truth, pT
 
     def convert_single_file(self, sourcefile, destdir, basename, idx):
         # Open a root file in "read" mode
@@ -287,6 +287,8 @@ class PartData:
             file_data = f["deepntuplizer;1"]["tree;1"]
 
             keys = list(file_data.keys())
+
+            pT = file_data["jet_pt"].array(library="np")
 
             # Truth branches
             reduced_truth = {
@@ -350,7 +352,7 @@ class PartData:
         output = os.path.join(destdir, "%s_%d.pkl" % (basename, idx))
         if os.path.exists(output):
             os.remove(output)
-        v = self._transform(X, y)
+        v = self._transform(X, y, pT)
         with open(output, "wb") as f:
             pickle.dump(v, f)
 
