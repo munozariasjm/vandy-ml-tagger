@@ -66,22 +66,36 @@ class CustomDS(Dataset):
         return file_idx, idx
 
     def __len__(self):
-        return self.total_len
+        return len(self.file_list)
 
-    def __getitem__(self, idx):
+    def transform_features(self, X):
+        """
+        Args:
+            X (List): List of all the features
+        """
+        all_data = [] # N_enevts x N_branches x N_features
+        n_branches = len(X)
+        n_enents = X[0].shape[0]
+        for i in range(n_enents):
+            event_data = []
+            for j in range(n_branches):
+                event_data.append(torch.from_numpy(X[j][i]).to(self.device))
+            all_data.append(event_data)
+        return all_data # N_events x N_branches x N_features
+
+    def transform_labels(self, y):
+        return [torch.from_numpy(y[i]).to(self.device) for i in range(len(y))]
+
+    def __getitem__(self, file_idx):
         """
         Returns the data for the given index.
         """
-        file_idx, idx = self.map_to_location(idx)
+        # file_idx, idx = self.map_to_location(idx)
         # Read the data from the file
         with open(self.file_list[file_idx], "rb") as f:
             data = pickle.load(f)
-        try:
-            X = ([torch.from_numpy(x)[idx].T.to(self.device) for x in data[0]])
-            y = torch.from_numpy(data[1][idx]).to(self.device)
-        except:
-            print("Error in file: ", self.file_list[file_idx])
-            print("Error at index: ", idx)
+        X = self.transform_features(data[0])
+        y = self.transform_labels(data[1])
         return X, y
 
 

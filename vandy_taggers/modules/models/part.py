@@ -783,6 +783,7 @@ class PartTrainer:
             val_loss = 0.0
 
             for batch_x, batch_y in train_loader:
+                print(batch_x)
                 train_loss += self.train_step(batch_x, batch_y, scaler = scaler) / len(train_loader)
                 pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
 
