@@ -727,7 +727,7 @@ class ParticleTransformer(nn.Module):
 
         if self.for_inference:
             output = torch.softmax(output, dim=1)
-
+        print("Particle Transformer Output Shape: ", output.shape)
         return output
 
 
@@ -771,10 +771,12 @@ class PartTrainer:
         return loss.item()
 
     def file_to_loader(self, file_data, batch_size = 1, shuffle = False):
+        print("Created new loader for file")
         file_loader = torch.utils.data.DataLoader(file_data, batch_size = batch_size, shuffle = shuffle)
         return file_loader
 
     def train(self, epochs, file_train_loader, file_val_loader, BS, path = None):
+
         self.model.to(self.device)
         pbar = tqdm(range(epochs))
         best_val_loss = 1e6
@@ -788,21 +790,27 @@ class PartTrainer:
 
             for file_data in file_train_loader:
                 loader = self.file_to_loader(file_data, batch_size = BS, shuffle = True)
-                for batch_x, batch_y in loader:
+                print("Scanning Training file")
+                for batch_x, batch_y in tqdm(loader):
                     train_loss += self.train_step(batch_x, batch_y, scaler = scaler) / len(loader)
                     pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
 
+                if path is not None:
+                    model_path = os.path.join(path, f"model_{epoch}.pt")
+                    torch.save(self.model, model_path)
+
             for file_data in file_val_loader:
                 loader = self.file_to_loader(file_data, batch_size = BS, shuffle = False)
+                print("Scanning Testing file")
                 for batch_x, batch_y in loader:
                     val_loss += self.eval_step(batch_x, batch_y) / len(loader)
                     pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
 
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                model_path = os.path.join(path, f"best_model.pt")
-                torch.save(self.model, model_path)
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
+                    model_path = os.path.join(path, f"best_model.pt")
+                    torch.save(self.model, model_path)
 
-            if path is not None:
-                model_path = os.path.join(path, f"model_{epoch}.pt")
-                torch.save(self.model, model_path)
+                if path is not None:
+                    model_path = os.path.join(path, f"model_{epoch}.pt")
+                    torch.save(self.model, model_path)

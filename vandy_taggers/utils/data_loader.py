@@ -29,18 +29,17 @@ class CustomDS(Dataset):
     """
     Custom dataset loader for the data.
     """
-    def __init__(self, input_folder, device="cuda") -> None:
+    def __init__(self, input_folder, device="cuda", get_pt=False) -> None:
         super().__init__()
         if not input_folder.endswith(".pkl"):
             path = (input_folder + "*.pkl").replace("**", "*")
             self.file_list = glob.glob(path)
         else:
-            self.file_list = glob.glob(os.path.join(input_folder) + "/*.pkl")
+            self.file_list = glob.glob(os.path.join(input_folder) + "/*")
         assert len(self.file_list) > 0, "No .pkl files found".format(input_folder)
-        self.file_list.sort()
         self.device = device
-        self.all_files_len = self._all_files_len()
-
+        self.len = len(self.file_list)
+        self.get_pt = get_pt
 
     def _all_files_len(self):
         """
@@ -54,7 +53,6 @@ class CustomDS(Dataset):
                 self.data_list.append(ldata)
         self.total_len = np.sum(self.data_list)
 
-
     def map_to_location(self, idx):
         """
         Maps the index to the file and the index in the file.
@@ -66,7 +64,7 @@ class CustomDS(Dataset):
         return file_idx, idx
 
     def __len__(self):
-        return len(self.file_list)
+        return self.len
 
     def transform_features(self, data):
         """
@@ -75,6 +73,7 @@ class CustomDS(Dataset):
         """
         X = data[0]
         y = data[1]
+        pts = data[2]
         all_data = [] # N_enevts x N_branches x N_features
         n_branches = len(X)
         n_enents = X[0].shape[0]
@@ -85,7 +84,11 @@ class CustomDS(Dataset):
                 X_i = torch.from_numpy(X[j][i]).to(self.device).T
                 event_data.append(X_i)
             y_i = torch.from_numpy(y[i]).to(self.device)
-            all_data.append((event_data, y_i))
+            pt_i = torch.from_numpy(pts[i]).to(self.device)
+            if not self.get_pt:
+                all_data.append((event_data, y_i))
+            else:
+                all_data.append((event_data, y_i, pt_i))
         return all_data # N_events x N_branches x N_features
 
     def __getitem__(self, file_idx):
@@ -104,7 +107,7 @@ class DataLoader:
     """
     Data loader for the dataset.
     """
-    def __init__(self, input_folder, num_workers=0, shuffle=True, drop_last=True) -> None:
+    def __init__(self, input_folder, num_workers=0, shuffle=True, drop_last=True, get_pt=False) -> None:
         super().__init__()
         self.input_folder = input_folder
         self.batch_size = 1
@@ -112,16 +115,12 @@ class DataLoader:
         self.shuffle = shuffle
         self.drop_last = drop_last
         self.class_weights = []
+        self.get_pt = get_pt
 
     def get_loader(self):
         """
         Returns the dataloader for the dataset.
         """
-        dataset = CustomDS(self.input_folder)
-        # return torch.utils.data.DataLoader(dataset,
-        #                                    batch_size=self.batch_size,
-        #                                    num_workers=self.num_workers,
-        #                                    shuffle=self.shuffle,
-        #                                    drop_last=self.drop_last)
+        dataset = CustomDS(self.input_folder, get_pt = self.get_pt)
         return dataset
 
