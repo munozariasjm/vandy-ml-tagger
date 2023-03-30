@@ -17,7 +17,7 @@ from joblib import Parallel, delayed
 
 """
 Modification of:
-https://github.com/jet-universe/particle_transformer/blob/main/utils/convert_qg_datasets.py
+https://github.com/jet-universe/particle__mer/blob/main/utils/convert_qg_datasets.py
 https://github.com/AlexDeMoor/DeepJet/blob/master/modules/datastructures/TrainData_deepFlavour.py#L1
 """
 class PartData:
@@ -240,6 +240,7 @@ class PartData:
         ground_truth = np.where(np.isnan(ground_truth), 0, ground_truth)
         sum_prbs = np.sum(ground_truth, axis=1)
         mask = sum_prbs > 0
+        pT = pT[mask]
         ground_truth = ground_truth[mask]
 
         # Transform cpf branches
