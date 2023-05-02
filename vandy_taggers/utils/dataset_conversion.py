@@ -301,11 +301,14 @@ class PartData:
                 b.extend(self.undefTruth)
 
             for_remove = file_data.arrays(b, library = 'pd')
-            notremoves = self.weighter_o['weigther'].createNotRemoveIndices(for_remove, use_uproot = True)
-            undef = for_remove['isUndefined']
-            notremoves -= undef
-            pu = for_remove['isPU']
-            notremoves -= pu
+            if self.weighter_o:
+                notremoves = self.weighter_o['weigther'].createNotRemoveIndices(for_remove, use_uproot = True)
+                undef = for_remove['isUndefined']
+                notremoves -= undef
+                pu = for_remove['isPU']
+                notremoves -= pu
+            else:
+                notremoves = np.ones(len(pT), dtype = bool)
 
             # Truth branches
             reduced_truth = {
@@ -355,7 +358,8 @@ class PartData:
                 for k in self.vtx_pts_branches
             ]
 
-            notremoves = list(notremoves.astype(int).values.flatten())
+            if np.isinstance(notremoves, pd.DataFrame):
+                notremoves = list(notremoves.astype(int).values.flatten())
             notremoves = np.array(notremoves)
             mask = notremoves > 0
             if self.remove:
@@ -391,14 +395,16 @@ class PartData:
         with open(output, "wb") as f:
             pickle.dump(v, f)
 
-    def convert(self, sourcelist, destdir, basename):
+    def convert(self, sourcelist, destdir, basename, is_train=True):
         """
         Parralelized conversion of a list of files into pickle files.
         source: path to a single file or a directory of files
         dest: path to the output directory
-
         """
-        self.weighter_o = self.weighter(sourcelist)
+        if is_train or "train" in basename:
+            self.weighter_o = self.weighter(sourcelist)
+        else:
+            self.weighter_o = None
         files = self.natural_sort(sourcelist)
         if not os.path.exists (destdir):
             os.makedirs(destdir)
