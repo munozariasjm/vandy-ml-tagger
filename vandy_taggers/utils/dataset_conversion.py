@@ -14,9 +14,13 @@ import awkward as ak
 import pandas as pd
 import pickle
 from joblib import Parallel, delayed
+# from vandy_taggers.utils.weighter import Weighter
+import sys
+sys.path.append("/home/jose/Documents/WORKS/CERN/InProgress/OwnArch/vandy-ml-tagger/vandy_taggers/utils")
+from weighter import Weighter
 
 """
-Modification of:
+Inpired by:
 https://github.com/jet-universe/particle__mer/blob/main/utils/convert_qg_datasets.py
 https://github.com/AlexDeMoor/DeepJet/blob/master/modules/datastructures/TrainData_deepFlavour.py#L1
 """
@@ -282,6 +286,7 @@ class PartData:
         return X, ground_truth, pT
 
     def convert_single_file(self, sourcefile, destdir, basename, idx):
+
         # Open a root file in "read" mode
         print("Converting ", sourcefile.split("/")[-1])
         with u.open(sourcefile) as f:
@@ -290,6 +295,17 @@ class PartData:
             keys = list(file_data.keys())
 
             pT = file_data["jet_pt"].array(library="np")
+            if self.remove:
+                b = [self.weightbranchX,self.weightbranchY]
+                b.extend(self.truth_branches)
+                b.extend(self.undefTruth)
+
+            for_remove = file_data.arrays(b, library = 'pd')
+            notremoves = self.weighter_o['weigther'].createNotRemoveIndices(for_remove, use_uproot = True)
+            undef = for_remove['isUndefined']
+            notremoves -= undef
+            pu = for_remove['isPU']
+            notremoves -= pu
 
             # Truth branches
             reduced_truth = {
@@ -339,6 +355,24 @@ class PartData:
                 for k in self.vtx_pts_branches
             ]
 
+            notremoves = list(notremoves.astype(int).values.flatten())
+            notremoves = np.array(notremoves)
+            mask = notremoves > 0
+            if self.remove:
+                print('remove')
+                global_branches = [np.ma.masked_where(mask, global_branches[i]) for i in range(len(global_branches))]
+                cpf_branches = [np.ma.masked_where(mask, cpf_branches[i]) for i in range(len(cpf_branches))]
+                npf_branches = [np.ma.masked_where(mask, npf_branches[i]) for i in range(len(npf_branches))]
+                vtx_branches = [np.ma.masked_where(mask, vtx_branches[i]) for i in range(len(vtx_branches))]
+                cpf_pts_branches = [np.ma.masked_where(mask, cpf_pts_branches[i]) for i in range(len(cpf_pts_branches))]
+                npf_pts_branches = [np.ma.masked_where(mask, npf_pts_branches[i]) for i in range(len(npf_pts_branches))]
+                vtx_pts_branches = [np.ma.masked_where(mask, vtx_pts_branches[i]) for i in range(len(vtx_pts_branches))]
+                reduced_truth = {k: np.ma.masked_where(mask, reduced_truth[k]) for k in reduced_truth}
+                #reduced_truth={k: reduced_truth[k][notremoves > 0] for k in reduced_truth}
+                # pT = [pT[i] for i in range(len(pT)) if mask[i] == False]
+
+            #newnsamp = global_branches
+
             X = {
                 "global_branches": global_branches,
                 "cpf_branches": cpf_branches,
@@ -364,10 +398,11 @@ class PartData:
         dest: path to the output directory
 
         """
+        self.weighter_o = self.weighter(sourcelist)
         files = self.natural_sort(sourcelist)
-        if not os.path.exists(destdir):
+        if not os.path.exists (destdir):
             os.makedirs(destdir)
-        Parallel(n_jobs=20)(
+        Parallel(n_jobs = 20)(
             delayed(self.convert_single_file)(sourcefile, destdir, basename, idx)
             for idx, sourcefile in enumerate(files)
         )
@@ -380,3 +415,36 @@ class PartData:
         def alphanum_key(key):
             return [convert(c) for c in re.split("([0-9]+)", key)]
         return sorted(l, key=alphanum_key)
+
+    def weighter(self, allsourcefiles: list):
+        weighter = Weighter()
+        weighter.undefTruth = self.undefTruth
+        weighter.class_weights = self.class_weights
+        branches = [self.weightbranchX,self.weightbranchY]
+        branches.extend(self.truth_branches)
+
+        if self.remove:
+            weighter.setBinningAndClasses(
+                [self.weight_binX,self.weight_binY],
+                self.weightbranchX,self.weightbranchY,
+                self.truth_branches, self.red_classes,
+                self.truth_red_fusion, method = self.referenceclass
+            )
+
+        counter=0
+        if self.remove:
+            for fname in allsourcefiles:
+                events = u.open(fname)["deepntuplizer/tree"]
+                nparray = events.arrays(branches, library = 'np')
+                keys = list(nparray.keys())
+                for k in range(len(branches)):
+                    nparray[branches[k]] = nparray.pop(keys[k])
+                nparray = pd.Series(nparray)
+                norm_hist = True
+                if self.referenceclass == 'flatten':
+                    norm_hist = False
+                weighter.addDistributions(nparray, norm_h = norm_hist)
+                #del nparray
+                counter=counter+1
+            weighter.createRemoveProbabilitiesAndWeights(self.referenceclass)
+            return {'weigther':weighter}
