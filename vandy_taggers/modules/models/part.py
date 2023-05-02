@@ -7,6 +7,7 @@ import torch.nn as nn
 from functools import partial
 import numpy as np
 from vandy_taggers.utils.dataset_conversion import PartData
+from vandy_taggers.utils.data_loader import DataLoader, DataFileDS
 from vandy_taggers.utils.pt_ranger import Ranger
 from tqdm.auto import tqdm
 import os
@@ -727,7 +728,6 @@ class ParticleTransformer(nn.Module):
 
         if self.for_inference:
             output = torch.softmax(output, dim=1)
-
         return output
 
 
@@ -771,10 +771,12 @@ class PartTrainer:
         return loss.item()
 
     def file_to_loader(self, file_data, batch_size = 1, shuffle = False):
-        file_loader = torch.utils.data.DataLoader(file_data, batch_size = batch_size, shuffle = shuffle)
+        dataset = DataFileDS(file_data)
+        file_loader = torch.utils.data.DataLoader(dataset, batch_size = batch_size, shuffle = shuffle)
         return file_loader
 
     def train(self, epochs, file_train_loader, file_val_loader, BS, path = None):
+
         self.model.to(self.device)
         pbar = tqdm(range(epochs))
         best_val_loss = 1e6
@@ -788,21 +790,25 @@ class PartTrainer:
 
             for file_data in file_train_loader:
                 loader = self.file_to_loader(file_data, batch_size = BS, shuffle = True)
-                for batch_x, batch_y in loader:
-                    train_loss += self.train_step(batch_x, batch_y, scaler = scaler) / len(loader)
+                for batch_x, batch_y, batch_pt in loader:
+                    train_loss += self.train_step(batch_x, batch_y, scaler = scaler) / (len(loader) * len(file_train_loader))
                     pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
+
+                if path is not None:
+                    model_path = os.path.join(path, f"model_{epoch}.pt")
+                    torch.save(self.model, model_path)
 
             for file_data in file_val_loader:
                 loader = self.file_to_loader(file_data, batch_size = BS, shuffle = False)
-                for batch_x, batch_y in loader:
-                    val_loss += self.eval_step(batch_x, batch_y) / len(loader)
+                for batch_x, batch_y, batch_pt in loader:
+                    val_loss += self.eval_step(batch_x, batch_y) / (len(loader) * len(file_val_loader))
                     pbar.set_description("Training Loss: %.4f, Validation Loss: %.4f" % (train_loss, val_loss))
 
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                model_path = os.path.join(path, f"best_model.pt")
-                torch.save(self.model, model_path)
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
+                    model_path = os.path.join(path, f"best_model.pt")
+                    torch.save(self.model, model_path)
 
-            if path is not None:
-                model_path = os.path.join(path, f"model_{epoch}.pt")
-                torch.save(self.model, model_path)
+                if path is not None:
+                    model_path = os.path.join(path, f"model_{epoch}.pt")
+                    torch.save(self.model, model_path)
