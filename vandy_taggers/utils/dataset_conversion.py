@@ -299,9 +299,8 @@ class PartData:
                 b = [self.weightbranchX,self.weightbranchY]
                 b.extend(self.truth_branches)
                 b.extend(self.undefTruth)
-
-            for_remove = file_data.arrays(b, library = 'pd')
-            if self.weighter_o:
+                for_remove = file_data.arrays(b, library = 'pd')
+            if self.weighter_o is not None:
                 notremoves = self.weighter_o['weigther'].createNotRemoveIndices(for_remove, use_uproot = True)
                 undef = for_remove['isUndefined']
                 notremoves -= undef
@@ -358,7 +357,7 @@ class PartData:
                 for k in self.vtx_pts_branches
             ]
 
-            if np.isinstance(notremoves, pd.DataFrame):
+            if isinstance(notremoves, pd.DataFrame):
                 notremoves = list(notremoves.astype(int).values.flatten())
             notremoves = np.array(notremoves)
             mask = notremoves > 0
@@ -401,9 +400,14 @@ class PartData:
         source: path to a single file or a directory of files
         dest: path to the output directory
         """
-        if is_train or "train" in basename:
+        if "test" in basename or not is_train:
+            self.weighter_o = None
+            self.remove = False
+        elif is_train or "train" in basename:
+            self.remove = True
             self.weighter_o = self.weighter(sourcelist)
         else:
+            self.remove = False
             self.weighter_o = None
         files = self.natural_sort(sourcelist)
         if not os.path.exists (destdir):
